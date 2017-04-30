@@ -11,7 +11,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
   def testSpan(): MockSpan = tracer.buildSpan("operation").start()
 
-  "A TextMapCarrier" should "generate span context data" in {
+  it should "generate span context data" in {
     val test: MockContext = testSpan().context()
 
     val result: Map[String, String] = TextMapCarrier.inject(tracer)(test)

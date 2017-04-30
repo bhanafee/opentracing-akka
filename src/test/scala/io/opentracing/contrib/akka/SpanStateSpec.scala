@@ -6,7 +6,7 @@ class SpanStateSpec extends AbstractTracingSpec {
 
   def testSpanState(): SpanState = new SpanState(tracer, "operation")
 
-  "A SpanState" should "return a non-null Span immediately after creation" in {
+  it should "return a non-null Span immediately after creation" in {
     val result = testSpanState()
     result.span should not be null
   }
