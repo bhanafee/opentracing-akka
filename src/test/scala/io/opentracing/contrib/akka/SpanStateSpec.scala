@@ -1,45 +1,44 @@
 package io.opentracing.contrib.akka
 
+import io.opentracing.mock.{MockSpan, MockTracer}
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers._
-
-import io.opentracing.mock.{MockSpan, MockTracer}
 
 class SpanStateSpec extends FlatSpec {
   val tracer: MockTracer = new MockTracer()
 
   def testSpanState(): SpanState = new SpanState(tracer, "operation")
 
-  "A newly created SpanState" should "return a non-null Span" in {
-    val test = testSpanState()
-    test.span should not be null
+  "A SpanState" should "return a non-null Span immediately after creation" in {
+    val result = testSpanState()
+    result.span should not be null
   }
 
-  "A SpanState" should "return the span that was set" in {
-    val test = testSpanState()
-    val span: MockSpan = tracer.buildSpan("test").start()
-    test.span = span
-    test.span should be (span)
+  it should "return the span that was set" in {
+    val test: MockSpan = tracer.buildSpan("test").start()
+    val result = testSpanState()
+    result.span = test
+    result.span should be (test)
   }
 
-  "A SpanState" should "return the same span until it is changed" in {
-    val test = testSpanState()
-    val span1 = tracer.buildSpan("test1").start()
-    val span2 = tracer.buildSpan("test2").start()
-    test.span = span1
-    test.span should be (span1)
-    test.span should be (span1)
-    test.span = span2
-    test.span should be (span2)
-    test.span should not be span1
+  it should "return the same span until it is changed" in {
+    val test1 = tracer.buildSpan("test1").start()
+    val test2 = tracer.buildSpan("test2").start()
+    val result = testSpanState()
+    result.span = test1
+    result.span should be (test1)
+    result.span should be (test1)
+    result.span = test2
+    result.span should be (test2)
+    result.span should not be test1
   }
 
-  "A SpanState" should "return a non-null Span after it is set to null" in {
+  it should "return a new Span after it is set to null" in {
     val test = testSpanState()
     val initial = test.span
     test.span = null
-    val next = test.span
-    next should not be null
-    next should not be initial
+    val result = test.span
+    assert(result != null, "Returned span was null")
+    assert(result != initial, "Returned span was unchanged from initial")
   }
 }

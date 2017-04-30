@@ -1,16 +1,18 @@
 package io.opentracing.contrib.akka
 
 import akka.actor.Actor.Receive
-import io.opentracing.{References, SpanContext}
 import io.opentracing.Tracer.SpanBuilder
+import io.opentracing.{References, SpanContext}
+
+import scala.util.Try
 
 /** Decorator to add a Span around a Receive. Akka messages are one-way, so references
   * to the received context are `FOLLOWS_FROM` rather than `CHILD_OF` */
 class TracingReceive(state: SpanState, r: Receive) extends Receive {
 
-  private val binaryExtractor: (BinaryCarrier.Payload) => Option[SpanContext] = BinaryCarrier.extract(state.tracer)
+  private val binaryExtractor: (BinaryCarrier.Payload) => Try[SpanContext] = BinaryCarrier.extract(state.tracer)
 
-  private val textMapExtractor: (TextMapCarrier.Payload) => Option[SpanContext] = TextMapCarrier.extract(state.tracer)
+  private val textMapExtractor: (TextMapCarrier.Payload) => Try[SpanContext] = TextMapCarrier.extract(state.tracer)
 
   /**
     * Wraps a call to `r` in a `Span`, where the `Span` itself is maintained by `SpanState`
@@ -34,10 +36,10 @@ class TracingReceive(state: SpanState, r: Receive) extends Receive {
   override def apply(v1: Any): Unit = v1 match {
     case c: Carrier[_]#Traceable =>
       // Extract the SpanContext from the payload
-      val sc: Option[SpanContext] = c.trace match {
+      val sc: Option[SpanContext] = (c.trace match {
         case b: Array[Byte] => binaryExtractor(b)
         case m: Map[String, String] => textMapExtractor(m)
-      }
+      }).toOption
       // Create a builder that will add a reference to the context
       val follows = (b: SpanBuilder) => sc match {
         case Some(s) => b.addReference(References.FOLLOWS_FROM, s)

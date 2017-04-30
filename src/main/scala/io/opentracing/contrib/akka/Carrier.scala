@@ -2,6 +2,8 @@ package io.opentracing.contrib.akka
 
 import io.opentracing.{SpanContext, Tracer}
 
+import scala.util.Try
+
 /** Carrier type `P` should be treated as opaque to enable switching between representations, and immutable. */
 trait Carrier[P] {
   type Payload = P
@@ -22,9 +24,9 @@ trait Carrier[P] {
   }
 
   /** Generate the tracer-specific payload to transmit a span context. */
-  def generate(t: Tracer)(c: SpanContext): Payload
+  def inject(t: Tracer)(c: SpanContext): Payload
 
   /** Extract the tracer-specific payload to describe a span context. */
-  def extract(t: Tracer)(p: Payload): Option[SpanContext]
+  def extract(t: Tracer)(p: Payload): Try[SpanContext]
 
 }

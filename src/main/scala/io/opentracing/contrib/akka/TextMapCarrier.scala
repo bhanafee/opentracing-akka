@@ -7,7 +7,7 @@ import io.opentracing.propagation.TextMap
 import io.opentracing.{SpanContext, Tracer}
 
 import scala.collection.JavaConverters._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /** Adapts the `TEXT_MAP` format to an immutable `Map[String, String]` payload */
 object TextMapCarrier extends Carrier[Map[String, String]] {
@@ -21,7 +21,7 @@ object TextMapCarrier extends Carrier[Map[String, String]] {
       throw new UnsupportedOperationException("Tried to put value to immutable carrier")
   }
 
-  override def generate(t: Tracer)(c: SpanContext): Payload = {
+  override def inject(t: Tracer)(c: SpanContext): Payload = {
     var kvs: List[(String, String)] = List.empty
     t.inject(c, TEXT_MAP, new TextMapAdapter {
       override def put(key: String, value: String): Unit = kvs = (key, value) :: kvs
@@ -29,11 +29,16 @@ object TextMapCarrier extends Carrier[Map[String, String]] {
     Map(kvs: _*)
   }
 
-  override def extract(t: Tracer)(p: Payload): Option[SpanContext] =
-    if (p.isEmpty) None
-    else Try(t.extract(TEXT_MAP, new TextMapAdapter {
-      override def iterator(): JIterator[JMap.Entry[String, String]] =
-        p.asJava.entrySet().iterator()
-    })).toOption
+  override def extract(t: Tracer)(p: Payload): Try[SpanContext] =
+    if (p.isEmpty) Failure(new NoSuchElementException("Empty payload"))
+    else {
+      Try(t.extract(TEXT_MAP, new TextMapAdapter {
+        override def iterator(): JIterator[JMap.Entry[String, String]] =
+          p.asJava.entrySet().iterator()
+      })) match {
+        case Success(null) =>  Failure(new NullPointerException("Tracer.extract returned null"))
+        case x => x
+      }
+    }
 
 }
