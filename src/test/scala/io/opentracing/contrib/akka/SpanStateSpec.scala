@@ -1,11 +1,8 @@
 package io.opentracing.contrib.akka
 
-import io.opentracing.mock.{MockSpan, MockTracer}
-import org.scalatest.FlatSpec
-import org.scalatest.Matchers._
+import io.opentracing.mock.MockSpan
 
-class SpanStateSpec extends FlatSpec {
-  val tracer: MockTracer = new MockTracer()
+class SpanStateSpec extends AbstractTracingSpec {
 
   def testSpanState(): SpanState = new SpanState(tracer, "operation")
 
