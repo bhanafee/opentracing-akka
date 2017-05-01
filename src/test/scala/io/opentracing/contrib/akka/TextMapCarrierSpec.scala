@@ -1,7 +1,7 @@
 package io.opentracing.contrib.akka
 
 import io.opentracing.SpanContext
-import io.opentracing.mock.MockSpan
+import io.opentracing.mock.{MockSpan, MockTracer}
 import io.opentracing.mock.MockSpan.MockContext
 
 import scala.util.Try
@@ -13,6 +13,8 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
   it should "generate span context data" in {
     val test: MockContext = testSpan().context()
+    assert(test.spanId() > 0L)
+    assert(test.traceId() > 0L)
 
     val result: Map[String, String] = TextMapCarrier.inject(tracer)(test)
 
@@ -24,6 +26,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
   ignore should "generate baggage items" in {
     val test = testSpan().setBaggageItem("key1", "value1").setBaggageItem("key2", "value2").context()
+    assert(!test.baggageItems().iterator().hasNext)
 
     val result: Map[String, String] = TextMapCarrier.inject(tracer)(test)
 

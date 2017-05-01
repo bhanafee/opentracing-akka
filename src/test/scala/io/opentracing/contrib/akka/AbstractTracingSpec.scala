@@ -5,6 +5,6 @@ import org.scalatest.{FlatSpec, Matchers}
 
 /** Base class for OpenTracing Akka tests*/
 class AbstractTracingSpec extends FlatSpec with Matchers {
-  val tracer: MockTracer = new MockTracer()
+  val tracer: MockTracer = new MockTracer(MockTracer.Propagator.TEXT_MAP)
 
 }
