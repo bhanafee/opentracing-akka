@@ -26,8 +26,6 @@ class TracingReceive(state: SpanState, r: Receive) extends Receive {
     state.span.finish()
   }
 
-  def tag(v1: Any): SpanBuilder => SpanBuilder = _.withTag("message", v1.getClass.getName)
-
   /** Proxies `r.isDefinedAt` */
   override def isDefinedAt(x: Any): Boolean = r.isDefinedAt(x)
 
@@ -45,8 +43,8 @@ class TracingReceive(state: SpanState, r: Receive) extends Receive {
         case Some(s) => b.addReference(References.FOLLOWS_FROM, s)
         case None => b
       }
-      wrap(sb => tag(c)(follows(sb)), c)
-    case c => wrap(tag(c), c)
+      wrap(sb => TracingReceive.tag(c)(follows(sb)), c)
+    case c => wrap(TracingReceive.tag(c), c)
   }
 
 }
@@ -54,9 +52,20 @@ class TracingReceive(state: SpanState, r: Receive) extends Receive {
 object TracingReceive {
   def apply(state: SpanState)(r: Receive): Receive = new TracingReceive(state, r)
 
-  // TODO: parameterize operation name
 
-  // TODO: parameterize tag name for message type
+  def tag(v1: Any): SpanBuilder => SpanBuilder = _.withTag("message", v1.getClass.getName)
 
-  // TODO: parameterize extractor for message type with comment warning about simpleName and canonicalName
+
+  /* TODO: figure out reference strategy.
+     - Always FOLLOW_FROM? Or if CHILD_OF useful for always sender()?
+     - What is correct SpanContext in a send back to sender()?
+     - How to recognize return messages?
+  */
+
+  // TODO: parameterize operation name (set via default in SpanState or during builder or in Span)
+
+  // TODO: stackable functions to add tags
+  // _.withTag("message", v1.getClass.getName)
+
+  // TODO: parameterize tag for message type (warn about simpleName and canonicalName)
 }
