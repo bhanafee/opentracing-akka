@@ -1,6 +1,8 @@
 name := "opentracing-akka"
 
-version := "0.0.1"
+organization := "io.opentracing.contrib.akka"
+
+version := "0.0.1-SNAPSHOT"
 
 scalaVersion := "2.12.2"
 
