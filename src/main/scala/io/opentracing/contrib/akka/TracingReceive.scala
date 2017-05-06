@@ -8,7 +8,7 @@ import scala.util.Try
 
 /** Decorator to add a Span around a Receive. Akka messages are one-way, so references
   * to the received context are `FOLLOWS_FROM` rather than `CHILD_OF` */
-class TracingReceive(state: SpanState, r: Receive) extends Receive {
+class TracingReceive(state: Spanned, r: Receive) extends Receive {
 
   private val binaryExtractor: (BinaryCarrier.Payload) => Try[SpanContext] = BinaryCarrier.extract(state.tracer)
 
@@ -50,7 +50,7 @@ class TracingReceive(state: SpanState, r: Receive) extends Receive {
 }
 
 object TracingReceive {
-  def apply(state: SpanState)(r: Receive): Receive = new TracingReceive(state, r)
+  def apply(state: Spanned)(r: Receive): Receive = new TracingReceive(state, r)
 
 
   def tag(v1: Any): SpanBuilder => SpanBuilder = _.withTag("message", v1.getClass.getName)
