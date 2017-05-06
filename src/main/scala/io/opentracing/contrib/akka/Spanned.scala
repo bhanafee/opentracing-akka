@@ -26,8 +26,8 @@ trait Spanned {
   def span_=(s: Span): Unit = _span = s
 
   /** Generates TextMap representation of the current span context. */
-  def trace(): TextMapCarrier.Payload = TextMapCarrier.inject(tracer)(span.context())
+  def trace(): TextMapCarrier.Payload = TextMapCarrier.inject(tracer, span.context())
 
   /** Generates binary representation of the current span context. */
-  def traceB(): BinaryCarrier.Payload = BinaryCarrier.inject(tracer)(span.context())
+  def traceB(): BinaryCarrier.Payload = BinaryCarrier.inject(tracer, span.context())
 }

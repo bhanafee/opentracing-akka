@@ -15,7 +15,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
     assert(test.spanId() > 0L)
     assert(test.traceId() > 0L)
 
-    val result: Map[String, String] = TextMapCarrier.inject(tracer)(test)
+    val result: Map[String, String] = TextMapCarrier.inject(tracer, test)
 
     result should not be 'isEmpty
     result.size should be (2)
@@ -27,7 +27,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
     val test = testSpan().setBaggageItem("key1", "value1").setBaggageItem("key2", "value2").context()
     assert(test.baggageItems().iterator().hasNext)
 
-    val result: Map[String, String] = TextMapCarrier.inject(tracer)(test)
+    val result: Map[String, String] = TextMapCarrier.inject(tracer, test)
 
     result.get("key1") should be (Some("value1"))
     result.get("key2") should be (Some("value2"))
@@ -36,7 +36,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
   it should "extract payload data" in {
     val test: Map[String, String] = Map(("spanid", "13"),("traceid", "17"))
 
-    val result: Try[SpanContext] = TextMapCarrier.extract(tracer)(test)
+    val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
 
     result.isSuccess should be (true)
     val mock = result.get.asInstanceOf[MockSpan.MockContext]
@@ -47,7 +47,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
   it should "handle an empty payload" in {
     val test: Map[String, String] = Map.empty
 
-    val result: Try[SpanContext] = TextMapCarrier.extract(tracer)(test)
+    val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
 
     result.isFailure should be (true)
   }
@@ -55,7 +55,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
   it should "handle a malformed payload" in {
     val test: Map[String, String] = Map(("bad_key", "bad_value"))
 
-    val result: Try[SpanContext] = TextMapCarrier.extract(tracer)(test)
+    val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
 
     result.isFailure should be (true)
   }
@@ -63,7 +63,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
   it should "extract baggage items" in {
     val test: Map[String, String] = Map(("spanid", "13"),("traceid", "17"),("key1", "value1"))
 
-    val result: Try[SpanContext] = TextMapCarrier.extract(tracer)(test)
+    val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
 
     result.isSuccess should be (true)
     val resultIter = result.get.baggageItems().iterator()

@@ -25,10 +25,10 @@ sealed trait Carrier[P] {
   }
 
   /** Generate the tracer-specific payload to transmit a span context. */
-  def inject(t: Tracer)(c: SpanContext): Payload
+  def inject(t: Tracer, c: SpanContext): Payload
 
   /** Extract the tracer-specific payload to describe a span context. */
-  def extract(t: Tracer)(p: Payload): Try[SpanContext]
+  def extract(t: Tracer, p: Payload): Try[SpanContext]
 
 }
 
@@ -40,7 +40,7 @@ object BinaryCarrier extends Carrier[Array[Byte]] {
   /** Maximum size of payload array returned by `generate`. */
   val MaxPayloadBytesGenerated = 2000
 
-  override def inject(t: Tracer)(c: SpanContext): Payload = {
+  override def inject(t: Tracer, c: SpanContext): Payload = {
     val b: ByteBuffer = ByteBuffer.allocate(MaxPayloadBytesGenerated)
     t.inject(c, BINARY, b)
     val p = new Array[Byte](b.position())
@@ -48,7 +48,7 @@ object BinaryCarrier extends Carrier[Array[Byte]] {
     p
   }
 
-  override def extract(t: Tracer)(p: Payload): Try[SpanContext] =
+  override def extract(t: Tracer, p: Payload): Try[SpanContext] =
     if (p.isEmpty) Failure(new NoSuchElementException("Empty payload"))
     else Try(t.extract(BINARY, ByteBuffer.wrap(p))) match {
       case Success(null) => Failure(new NullPointerException("Tracer.extract returned null"))
@@ -75,7 +75,7 @@ object TextMapCarrier extends Carrier[Map[String, String]] {
       throw new UnsupportedOperationException("Tried to put value to immutable carrier")
   }
 
-  override def inject(t: Tracer)(c: SpanContext): Payload = {
+  override def inject(t: Tracer, c: SpanContext): Payload = {
     var kvs: List[(String, String)] = List.empty
     t.inject(c, TEXT_MAP, new TextMapAdapter {
       override def put(key: String, value: String): Unit = kvs = (key, value) :: kvs
@@ -83,7 +83,7 @@ object TextMapCarrier extends Carrier[Map[String, String]] {
     Map(kvs: _*)
   }
 
-  override def extract(t: Tracer)(p: Payload): Try[SpanContext] =
+  override def extract(t: Tracer, p: Payload): Try[SpanContext] =
     if (p.isEmpty) Failure(new NoSuchElementException("Empty payload"))
     else {
       Try(t.extract(TEXT_MAP, new TextMapAdapter {

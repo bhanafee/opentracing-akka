@@ -14,7 +14,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
   ignore should "generate span context data" in {
     val test: MockContext = testSpan().context()
 
-    val result: Array[Byte] = BinaryCarrier.inject(tracer)(test)
+    val result: Array[Byte] = BinaryCarrier.inject(tracer, test)
 
     //assert(result.length > 0, "Empty array injected")
     // TODO: How to check for spanid, traceid
@@ -23,7 +23,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
   ignore should "generate baggage items" in {
     val test = testSpan().setBaggageItem("key1", "value1").setBaggageItem("key2", "value2")
 
-    val result: Array[Byte] = BinaryCarrier.inject(tracer)(test.context())
+    val result: Array[Byte] = BinaryCarrier.inject(tracer, test.context())
 
     // TODO: How to check?
   }
@@ -31,7 +31,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
   ignore should "extract payload data" in {
     val test = Array.emptyByteArray // TODO: encode spanid = 13, traceid = 17
 
-    val result: Try[SpanContext] = BinaryCarrier.extract(tracer)(test)
+    val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
 
     result.isSuccess should be (true)
     val mock = result.get.asInstanceOf[MockContext]
@@ -42,7 +42,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
   it should "handle an empty payload" in {
     val test = Array.emptyByteArray
 
-    val result: Try[SpanContext] = BinaryCarrier.extract(tracer)(test)
+    val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
 
     result.isFailure should be (true)
   }
@@ -50,7 +50,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
   it should "handle a malformed payload" in {
     val test = Array[Byte](0, 1)
 
-    val result: Try[SpanContext] = BinaryCarrier.extract(tracer)(test)
+    val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
 
     result.isFailure should be (true)
   }
@@ -58,7 +58,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
   ignore should "extract baggage items" in {
     val test = Array.emptyByteArray // TODO: encode spanid = 13, traceid = 17, key1 = value1
 
-    val result: Try[SpanContext] = BinaryCarrier.extract(tracer)(test)
+    val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
 
     result.isSuccess should be (true)
     val resultIter = result.get.baggageItems().iterator()
