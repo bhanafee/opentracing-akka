@@ -8,7 +8,7 @@ trait Spanned {
   val tracer: Tracer
 
   /** default operation name */
-  def operation: String
+  def operation(): String
 
   /** Internal holder for the span this wraps. */
   private[this] var _span: Span = _
@@ -17,7 +17,7 @@ trait Spanned {
   def span: Span = {
     // Not thread-safe, but if there are two threads acting on the span there are other problems.
     if (_span == null) {
-      _span = tracer.buildSpan(operation).start()
+      _span = tracer.buildSpan(operation()).start()
     }
     _span
   }
