@@ -9,7 +9,7 @@ import akka.actor.ActorRef
 import io.opentracing.Tracer.SpanBuilder
 import io.opentracing.References
 
-/** Decorator to add an OpenTracing Span around a Actor's Receive. */
+/** Decorator to add an OpenTracing Span around an Actor's Receive. */
 class TracingReceive(r: Receive,
                      state: Spanned,
                      operation: TracingReceive.Operation,
@@ -49,27 +49,43 @@ object TracingReceive {
   def apply(state: Spanned, operation: Operation, modifiers: Modifier*)(r: Receive): Receive =
     new TracingReceive(r, state, operation, modifiers: _*)
 
+  /** Tracing receive that
+    * - uses the message type as the operation name
+    * - includes a FOLLOWS_FROM reference to any span found in the message
+    * - tags the "component" as "akka"
+    */
   def apply(state: Spanned)(r: Receive): Receive =
     new TracingReceive(r, state, messageClassIsOperation, follows(state), tagAkkaComponent)
 
+  /** Tracing receive that
+    * - uses the message type as the operation name
+    * - includes a FOLLOWS_FROM reference to any span found in the message
+    * - tags the "component" as "akka"
+    * - tags the "akka.uri" as the actor address
+    */
   def apply(state: Spanned, ref: ActorRef)(r: Receive) =
     new TracingReceive(r, state, messageClassIsOperation, follows(state), tagAkkaComponent, tagActorUri(ref))
 
+  /** Use a constant operation name. */
   def constantOperation(operation: String): Operation = _ => operation
 
+  /** Use the message type as the trace operation name. */
   def messageClassIsOperation: Operation = _.getClass.getName
 
+  /** Use the actor name as the trace operation name. */
   def actorNameIsOperation(ref: ActorRef): Operation = constantOperation(ref.path.name)
 
   /** Akka messages are one-way, so by default references to the received context are
-    * `FOLLOWS_FROM` rather than`CHILD_OF` */
+    * `FOLLOWS_FROM` rather than `CHILD_OF` */
   def follows(state: Spanned, reference: String = References.FOLLOWS_FROM): Modifier =
     (b: SpanBuilder, m: Any) => m match {
+      // The type parameter to Carrier is erased, so match on Carrier then match on the trace parameter
       case c: Carrier[_]#Traceable =>
         // Extract the SpanContext from the payload
         (c.trace match {
           case b: Array[Byte] => BinaryCarrier.extract(state.tracer, b)
-          case m: Map[String, String] => TextMapCarrier.extract(state.tracer, m)
+          // The type parameters to Map are erased, but the Carrier trait is sealed and there's only one Map trace
+          case m: Map[String, String]@unchecked => TextMapCarrier.extract(state.tracer, m)
         }) match {
           case Success(s) => b.addReference(reference, s)
           case Failure(_) => b
@@ -77,18 +93,19 @@ object TracingReceive {
       case _ => b
     }
 
+  /** Add a "component" span tag indicating the framework is "akka" */
   val tagAkkaComponent: Modifier =
     (b: SpanBuilder, _) => b.withTag("component", "akka")
 
+  /** Add an "akka.uri" span tag containing the actor address. */
   def tagActorUri(ref: ActorRef): Modifier =
-    (b: SpanBuilder, _) => b.withTag("akka.uri", ref.path.name)
+    (b: SpanBuilder, _) => b.withTag("akka.uri", ref.path.address.toString)
 
-  def tag(name: String, extract: Any => String): Modifier =
-    (b: SpanBuilder, m: Any) => b.withTag(name, extract(m))
-
-//  def tag(name: String, extract: Any => Boolean): Modifier =
-//    (b: SpanBuilder, m: Any) => b.withTag(name, extract(m))
-//
-//  def tag(name: String, extract: Any => Number): Modifier =
-//    (b: SpanBuilder, m: Any) => b.withTag(name, extract(m))
+  /** Add an arbitrary span tag, taking the value from some extract function that accepts the message as input. */
+  def tag(name: String, extract: Any => Any): Modifier = (sb: SpanBuilder, m: Any) => extract(m) match {
+    case s: String => sb.withTag(name, s)
+    case b: Boolean => sb.withTag(name, b)
+    case n: Number => sb.withTag(name, n)
+    case x => sb.withTag(name, x.toString)
+  }
 }
