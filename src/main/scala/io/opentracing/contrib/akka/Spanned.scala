@@ -17,7 +17,7 @@ trait Spanned {
   def span: Span = {
     // Not thread-safe, but if there are two threads acting on the span there are other problems.
     if (_span == null) {
-      _span = tracer.buildSpan(operation()).start()
+      _span = tracer.buildSpan(operation()).startManual()
     }
     _span
   }

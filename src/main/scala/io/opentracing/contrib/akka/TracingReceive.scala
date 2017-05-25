@@ -25,7 +25,7 @@ class TracingReceive(r: Receive,
     val z: SpanBuilder = state.tracer.buildSpan(operation(v1))
     val op: (SpanBuilder, TracingReceive.Modifier) => SpanBuilder = (sb, m) => m(sb, v1)
     val sb = modifiers.foldLeft(z)(op)
-    state.span = sb.withStartTimestamp(nowMicroseconds()).start()
+    state.span = sb.withStartTimestamp(nowMicroseconds()).startManual()
     r(v1)
     state.span.finish()
   }
