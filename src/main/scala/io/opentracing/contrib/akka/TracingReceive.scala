@@ -25,18 +25,10 @@ class TracingReceive(r: Receive,
     val z: SpanBuilder = state.tracer.buildSpan(operation(v1))
     val op: (SpanBuilder, TracingReceive.Modifier) => SpanBuilder = (sb, m) => m(sb, v1)
     val sb = modifiers.foldLeft(z)(op)
-    state.span = sb.withStartTimestamp(nowMicroseconds()).startManual()
+    state.span = sb.startManual()
     r(v1)
     state.span.finish()
   }
-
-  def nowMicroseconds(): Long = {
-    val now = Instant.now()
-    val secs = now.getLong(ChronoField.INSTANT_SECONDS)
-    val micros = now.getLong(ChronoField.MICRO_OF_SECOND)
-    secs * 1000000 + micros
-  }
-
 }
 
 object TracingReceive {
@@ -55,7 +47,7 @@ object TracingReceive {
     * - tags the "component" as "akka"
     */
   def apply(state: Spanned)(r: Receive): Receive =
-    new TracingReceive(r, state, messageClassIsOperation, follows(state), tagAkkaComponent)
+    new TracingReceive(r, state, messageClassIsOperation, follows(state), tagAkkaComponent, timestamp())
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -64,7 +56,7 @@ object TracingReceive {
     * - tags the "akka.uri" as the actor address
     */
   def apply(state: Spanned, ref: ActorRef)(r: Receive) =
-    new TracingReceive(r, state, messageClassIsOperation, follows(state), tagAkkaComponent, tagActorUri(ref))
+    new TracingReceive(r, state, messageClassIsOperation, follows(state), tagAkkaComponent, tagActorUri(ref), timestamp())
 
   /** Use a constant operation name. */
   def constantOperation(operation: String): Operation = _ => operation
@@ -107,5 +99,12 @@ object TracingReceive {
     case b: Boolean => sb.withTag(name, b)
     case n: Number => sb.withTag(name, n)
     case x => sb.withTag(name, x.toString)
+  }
+
+  def timestamp() : Modifier = (sb: SpanBuilder, _) => {
+    val now = Instant.now()
+    val secs = now.getLong(ChronoField.INSTANT_SECONDS)
+    val micros = now.getLong(ChronoField.MICRO_OF_SECOND)
+    sb.withStartTimestamp(secs * 1000000 + micros)
   }
 }
