@@ -110,11 +110,12 @@ object TracingReceive {
     (b: SpanBuilder, _) => b.withTag("akka.uri", ref.path.address.toString)
 
   /** Add an arbitrary span tag, taking the value from some extract function that accepts the message as input. */
-  def tag(name: String, extract: Any => Any): Modifier = (sb: SpanBuilder, m: Any) => extract(m) match {
-    case s: String => sb.withTag(name, s)
-    case b: Boolean => sb.withTag(name, b)
-    case n: Number => sb.withTag(name, n)
-    case x => sb.withTag(name, x.toString)
+  def tag(name: String, extract: Any => Option[Any]): Modifier = (sb: SpanBuilder, m: Any) => extract(m) match {
+    case None => sb
+    case Some(s: String) => sb.withTag(name, s)
+    case Some(b: Boolean) => sb.withTag(name, b)
+    case Some(n: Number) => sb.withTag(name, n)
+    case Some(x) => sb.withTag(name, x.toString)
   }
 
   def timestamp() : Modifier = (sb: SpanBuilder, _) => {
