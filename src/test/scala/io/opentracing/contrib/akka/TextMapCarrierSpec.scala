@@ -20,8 +20,8 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
   it should "generate span context data" in {
     val test: MockSpan.MockContext = testSpan().context()
-    assert(test.spanId() > 0L)
-    assert(test.traceId() > 0L)
+    assume(test.spanId() > 0L, "Span id wasn't initialized")
+    assume(test.traceId() > 0L, "Trace id wasn't initialized")
 
     val result: Map[String, String] = TextMapCarrier.inject(tracer, test)
 
@@ -33,7 +33,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
   it should "generate baggage items" in {
     val test = testSpan().setBaggageItem("key1", "value1").setBaggageItem("key2", "value2").context()
-    assert(test.baggageItems().iterator().hasNext)
+    assume(test.baggageItems().iterator().hasNext, "Test baggage wasn't created")
 
     val result: Map[String, String] = TextMapCarrier.inject(tracer, test)
 
