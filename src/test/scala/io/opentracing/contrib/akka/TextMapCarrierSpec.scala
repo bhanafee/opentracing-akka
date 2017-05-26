@@ -15,7 +15,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
     val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
 
-    result.isFailure should be (true)
+    result shouldBe 'isFailure
   }
 
   it should "generate span context data" in {
@@ -48,8 +48,8 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
     result.isSuccess should be (true)
     val mock = result.get.asInstanceOf[MockSpan.MockContext]
-    mock.spanId() should be (13L)
-    mock.traceId() should be (17L)
+    mock.spanId() shouldBe (13L)
+    mock.traceId() shouldBe (17L)
   }
 
   it should "handle a malformed payload" in {
@@ -57,7 +57,7 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
     val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
 
-    result.isFailure should be (true)
+    result shouldBe 'isFailure
   }
 
   it should "extract baggage items" in {
@@ -65,12 +65,12 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
     val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
 
-    result.isSuccess should be (true)
+    result shouldBe 'isSuccess
     val resultIter = result.get.baggageItems().iterator()
     resultIter.hasNext should be (true)
     val baggage = resultIter.next()
-    baggage.getKey should be ("key1")
-    baggage.getValue should be ("value1")
+    baggage.getKey shouldBe ("key1")
+    baggage.getValue shouldBe ("value1")
     resultIter.hasNext should be (false)
   }
 

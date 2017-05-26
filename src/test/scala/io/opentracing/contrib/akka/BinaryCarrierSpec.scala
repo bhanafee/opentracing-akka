@@ -16,7 +16,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
 
     val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
 
-    result.isFailure should be (true)
+    result shouldBe 'isFailure
   }
 
   ignore should "generate span context data" in {
@@ -41,7 +41,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
 
     val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
 
-    result.isSuccess should be (true)
+    result shouldBe 'isSuccess
     val mock = result.get.asInstanceOf[MockContext]
     mock.spanId() should be (13L)
     mock.traceId() should be (17L)
@@ -52,7 +52,7 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
 
     val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
 
-    result.isFailure should be (true)
+    result shouldBe 'isFailure
   }
 
   ignore should "extract baggage items" in {
@@ -60,9 +60,9 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
 
     val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
 
-    result.isSuccess should be (true)
+    result shouldBe 'isSuccess
     val resultIter = result.get.baggageItems().iterator()
-    resultIter.hasNext should be (true)
+    resultIter shouldBe 'hasNext
     resultIter.next() should be (("key1", "value1"))
     resultIter.hasNext should be (false)
   }

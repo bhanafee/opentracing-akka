@@ -38,7 +38,7 @@ class SpannedSpec extends AbstractTracingSpec {
     val initial = test.span
     test.span = null
     val result = test.span
-    assert(result != null, "Returned span was null")
-    assert(result != initial, "Returned span was unchanged from initial")
+    result should not be null
+    result should not be initial
   }
 }
