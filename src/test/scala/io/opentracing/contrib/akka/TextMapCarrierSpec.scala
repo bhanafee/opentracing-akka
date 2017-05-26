@@ -10,6 +10,14 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
 
   def testSpan(): MockSpan = tracer.buildSpan("operation").start()
 
+  "A text map carrier"  should "handle an empty payload" in {
+    val test: Map[String, String] = Map.empty
+
+    val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
+
+    result.isFailure should be (true)
+  }
+
   it should "generate span context data" in {
     val test: MockSpan.MockContext = testSpan().context()
     assert(test.spanId() > 0L)
@@ -42,14 +50,6 @@ class TextMapCarrierSpec extends AbstractTracingSpec {
     val mock = result.get.asInstanceOf[MockSpan.MockContext]
     mock.spanId() should be (13L)
     mock.traceId() should be (17L)
-  }
-
-  it should "handle an empty payload" in {
-    val test: Map[String, String] = Map.empty
-
-    val result: Try[SpanContext] = TextMapCarrier.extract(tracer, test)
-
-    result.isFailure should be (true)
   }
 
   it should "handle a malformed payload" in {

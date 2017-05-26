@@ -2,11 +2,7 @@ package io.opentracing.contrib.akka
 
 /** */
 class TracingReceiveSpec extends AbstractTracingSpec {
-  ignore should "be defined if the wrapped receive is defined" in {
+  "A receive function" should "be defined if the wrapped receive is defined" in pending
 
-  }
-
-  ignore should "be undefined if the wrapped receive is undefined" in {
-
-  }
+  it should "be undefined if the wrapped receive is undefined" in pending
 }

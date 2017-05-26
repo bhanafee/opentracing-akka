@@ -11,6 +11,14 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
 
   def testSpan(): MockSpan = tracer.buildSpan("operation").start()
 
+  "A binary carrier" should "handle an empty payload" in {
+    val test = Array.emptyByteArray
+
+    val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
+
+    result.isFailure should be (true)
+  }
+
   ignore should "generate span context data" in {
     val test: MockContext = testSpan().context()
 
@@ -37,14 +45,6 @@ class BinaryCarrierSpec extends AbstractTracingSpec {
     val mock = result.get.asInstanceOf[MockContext]
     mock.spanId() should be (13L)
     mock.traceId() should be (17L)
-  }
-
-  it should "handle an empty payload" in {
-    val test = Array.emptyByteArray
-
-    val result: Try[SpanContext] = BinaryCarrier.extract(tracer, test)
-
-    result.isFailure should be (true)
   }
 
   it should "handle a malformed payload" in {

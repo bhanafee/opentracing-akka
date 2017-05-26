@@ -9,7 +9,7 @@ class SpannedSpec extends AbstractTracingSpec {
     override val operation = "operation"
   }
 
-  it should "return a non-null Span immediately after creation" in {
+  "A spanned holder" should "return a non-null Span immediately after creation" in {
     val result = testSpanned()
     result.span should not be null
   }
