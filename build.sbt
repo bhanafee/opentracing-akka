@@ -11,7 +11,7 @@ resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor"       % "2.5.1",
   "com.typesafe.akka" %% "akka-remote"      % "2.5.1",
-  "io.opentracing"    %  "opentracing-api"  % "0.30.0.RC2",
-  "io.opentracing"    %  "opentracing-mock" % "0.30.0.RC2" % "test",
+  "io.opentracing"    %  "opentracing-api"  % "0.30.1.RC3-SNAPSHOT",
+  "io.opentracing"    %  "opentracing-mock" % "0.30.1.RC3-SNAPSHOT" % "test",
   "org.scalatest"     %% "scalatest"        % "3.0.1"  % "test"
 )
