@@ -9,7 +9,7 @@ import akka.actor.ActorRef
 import io.opentracing.Tracer.SpanBuilder
 import io.opentracing.{References, Span}
 
-/** Decorator to add an OpenTracing Span around an Actor's Receive. */
+/** Decorator to add an OpenTracing Span around an Actor's Receive */
 class TracingReceive(r: Receive,
                      state: Spanned,
                      operation: TracingReceive.Operation,
@@ -38,17 +38,18 @@ class TracingReceive(r: Receive,
   }
 
   /** Tag and log an exception thrown by `apply` */
-  def error(span: Span, e: Throwable): Unit = {
+  def error(span: Span, e: Throwable, micros: => Long = TracingReceive.micros()): Unit = {
+    val time = micros
     span.setTag("error", true)
     val fields: java.util.Map[String, Any] = new java.util.HashMap[String, Any]
     fields.put("event", "error")
     fields.put("error.object", e)
-    span.log(fields)
+    span.log(time, fields)
   }
 }
 
 object TracingReceive {
-  /** Used to specify the span's operation name. */
+  /** Used to specify the span's operation name */
   type Operation = Any => String
 
   /** Used to stack SpanBuilder operations */
@@ -63,7 +64,7 @@ object TracingReceive {
     * - tags the "component" as "akka"
     */
   def apply(state: Spanned)(r: Receive): Receive =
-    new TracingReceive(r, state, messageClassIsOperation, follows(state), tagAkkaComponent, timestamp())
+    new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state), timestamp())
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -72,15 +73,15 @@ object TracingReceive {
     * - tags the "akka.uri" as the actor address
     */
   def apply(state: Spanned, ref: ActorRef)(r: Receive) =
-    new TracingReceive(r, state, messageClassIsOperation, follows(state), tagAkkaComponent, tagActorUri(ref), timestamp())
+    new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state), tagActorUri(ref), timestamp())
 
-  /** Use a constant operation name. */
+  /** Use a constant operation name */
   def constantOperation(operation: String): Operation = _ => operation
 
-  /** Use the message type as the trace operation name. */
-  def messageClassIsOperation: Operation = _.getClass.getName
+  /** Use the message type as the trace operation name */
+  val messageClassIsOperation: Operation = _.getClass.getName
 
-  /** Use the actor name as the trace operation name. */
+  /** Use the actor name as the trace operation name */
   def actorNameIsOperation(ref: ActorRef): Operation = constantOperation(ref.path.name)
 
   /** Akka messages are one-way, so by default references to the received context are
@@ -105,11 +106,11 @@ object TracingReceive {
   val tagAkkaComponent: Modifier =
     (b: SpanBuilder, _) => b.withTag("component", "akka")
 
-  /** Add an "akka.uri" span tag containing the actor address. */
+  /** Add an "akka.uri" span tag containing the actor address */
   def tagActorUri(ref: ActorRef): Modifier =
     (b: SpanBuilder, _) => b.withTag("akka.uri", ref.path.address.toString)
 
-  /** Add an arbitrary span tag, taking the value from some extract function that accepts the message as input. */
+  /** Add an arbitrary span tag, taking the value from some extract function that accepts the message as input */
   def tag(name: String, extract: Any => Option[Any]): Modifier = (sb: SpanBuilder, m: Any) => extract(m) match {
     case None => sb
     case Some(s: String) => sb.withTag(name, s)
@@ -118,10 +119,15 @@ object TracingReceive {
     case Some(x) => sb.withTag(name, x.toString)
   }
 
-  def timestamp() : Modifier = (sb: SpanBuilder, _) => {
+  /** Timestamp in microseconds */
+  def micros(): Long = {
     val now = Instant.now()
     val secs = now.getLong(ChronoField.INSTANT_SECONDS)
     val micros = now.getLong(ChronoField.MICRO_OF_SECOND)
-    sb.withStartTimestamp(secs * 1000000 + micros)
+    secs * 1000000 + micros
   }
+
+  /** Add a start timestamp using `micros()` */
+  def timestamp(): Modifier = (sb: SpanBuilder, _) => sb.withStartTimestamp(micros())
+
 }
