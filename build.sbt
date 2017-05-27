@@ -6,12 +6,12 @@ version := "0.0.1-SNAPSHOT"
 
 scalaVersion := "2.12.2"
 
-resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
+resolvers += "Bintray" at "http://dl.bintray.com/opentracing/maven"
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor"       % "2.5.1",
   "com.typesafe.akka" %% "akka-remote"      % "2.5.1",
-  "io.opentracing"    %  "opentracing-api"  % "0.30.1.RC3-SNAPSHOT",
-  "io.opentracing"    %  "opentracing-mock" % "0.30.1.RC3-SNAPSHOT" % "test",
+  "io.opentracing"    %  "opentracing-api"  % "0.30.0",
+  "io.opentracing"    %  "opentracing-mock" % "0.30.0" % "test",
   "org.scalatest"     %% "scalatest"        % "3.0.1"  % "test"
 )
