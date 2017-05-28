@@ -1,8 +1,10 @@
 package io.opentracing.contrib.akka
 
 import io.opentracing.mock.{MockSpan, MockTracer}
+import org.scalatest.{FlatSpec, Matchers}
 
-class SpannedSpec extends AbstractTracingSpec {
+class SpannedSpec extends FlatSpec with Matchers {
+  val tracer: MockTracer = new MockTracer(MockTracer.Propagator.TEXT_MAP)
 
   def testSpanned(): Spanned = new Spanned() {
     override val tracer: MockTracer = SpannedSpec.this.tracer
@@ -18,7 +20,7 @@ class SpannedSpec extends AbstractTracingSpec {
     val test: MockSpan = tracer.buildSpan("test").start()
     val result = testSpanned()
     result.span = test
-    result.span should be (test)
+    result.span should be(test)
   }
 
   it should "return the same span until it is changed" in {
@@ -26,10 +28,10 @@ class SpannedSpec extends AbstractTracingSpec {
     val test2 = tracer.buildSpan("test2").start()
     val result = testSpanned()
     result.span = test1
-    result.span should be (test1)
-    result.span should be (test1)
+    result.span should be(test1)
+    result.span should be(test1)
     result.span = test2
-    result.span should be (test2)
+    result.span should be(test2)
     result.span should not be test1
   }
 
