@@ -43,4 +43,12 @@ class SpannedSpec extends FlatSpec with Matchers {
     result should not be null
     result should not be initial
   }
+
+  it should "produce a text map carrier " in {
+    val result = testSpanned().trace()
+    result should not be null
+    result shouldBe 'nonEmpty
+  }
+
+  it should "produce a binary carrier" in pending
 }
