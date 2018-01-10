@@ -13,5 +13,5 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-remote"      % "2.5.8",
   "io.opentracing"    %  "opentracing-api"  % "0.30.0",
   "io.opentracing"    %  "opentracing-mock" % "0.30.0" % "test",
-  "org.scalatest"     %% "scalatest"        % "3.0.1"  % "test"
+  "org.scalatest"     %% "scalatest"        % "3.0.4"  % "test"
 )
