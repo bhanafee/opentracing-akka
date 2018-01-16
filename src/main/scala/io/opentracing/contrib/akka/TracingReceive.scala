@@ -1,16 +1,18 @@
 package io.opentracing.contrib.akka
 
-import scala.util.{Failure, Success, Try}
 import akka.actor.Actor.Receive
 import akka.actor.ActorRef
-import io.opentracing.Tracer.SpanBuilder
 import io.opentracing.Span
+import io.opentracing.Tracer.SpanBuilder
+import io.opentracing.contrib.akka.SpanModifiers._
+
+import scala.util.{Failure, Success, Try}
 
 /** Decorator to add an OpenTracing Span around an Actor's Receive */
 class TracingReceive(r: Receive,
                      state: Spanned,
-                     operation: TracingReceive.Operation,
-                     modifiers: SpanModifiers.Modifier*)
+                     operation: Operation,
+                     modifiers: Modifier*)
   extends Receive {
 
   /** Proxies `r.isDefinedAt` */
@@ -49,9 +51,6 @@ class TracingReceive(r: Receive,
 }
 
 object TracingReceive {
-  import SpanModifiers._
-  /** Used to specify the span's operation name */
-  type Operation = Any => String
 
   def apply(state: Spanned, operation: Operation, modifiers: Modifier*)(r: Receive): Receive =
     new TracingReceive(r, state, operation, modifiers: _*)
@@ -72,13 +71,4 @@ object TracingReceive {
     */
   def apply(state: Spanned, ref: ActorRef)(r: Receive) =
     new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state.tracer), tagActorUri(ref), timestamp())
-
-  /** Use a constant operation name */
-  def constantOperation(operation: String): Operation = _ => operation
-
-  /** Use the message type as the trace operation name */
-  val messageClassIsOperation: Operation = _.getClass.getName
-
-  /** Use the actor name as the trace operation name */
-  def actorNameIsOperation(ref: ActorRef): Operation = constantOperation(ref.path.name)
 }

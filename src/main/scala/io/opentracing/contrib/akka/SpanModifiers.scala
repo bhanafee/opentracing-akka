@@ -11,9 +11,24 @@ import scala.util.{Failure, Success}
 
 object SpanModifiers {
 
+  /* Operations */
+
+  /** Used to specify the span's operation name */
+  type Operation = Any => String
+
+  /** Use a constant operation name */
+  def constantOperation(operation: String): Operation = _ => operation
+
+  /** Use the message type as the trace operation name */
+  val messageClassIsOperation: Operation = _.getClass.getName
+
+  /** Use the actor name as the trace operation name */
+  def actorNameIsOperation(ref: ActorRef): Operation = constantOperation(ref.path.name)
+
+  /* Modifiers */
+
   /** Used to stack SpanBuilder operations */
   type Modifier = (SpanBuilder, Any) => SpanBuilder
-
 
   /** Akka messages are one-way, so by default references to the received context are
     * `FOLLOWS_FROM` rather than `CHILD_OF` */
