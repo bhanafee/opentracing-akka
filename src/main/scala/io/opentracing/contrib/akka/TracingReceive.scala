@@ -7,7 +7,7 @@ import scala.util.{Failure, Success, Try}
 import akka.actor.Actor.Receive
 import akka.actor.ActorRef
 import io.opentracing.Tracer.SpanBuilder
-import io.opentracing.{References, Span}
+import io.opentracing.{References, Span, Tracer}
 
 /** Decorator to add an OpenTracing Span around an Actor's Receive */
 class TracingReceive(r: Receive,
@@ -20,8 +20,8 @@ class TracingReceive(r: Receive,
   override def isDefinedAt(x: Any): Boolean = r.isDefinedAt(x)
 
   /** Invokes `r.apply` in the context of a new `Span` held by `state`.  The span is built,
-    * started, and finished by this wrapper using manual span propagation. Span propagation
-    * using an `ActiveSpan` is not necessary because the Akka programming model guarantees
+    * started, and finished by this wrapper using manual span propagation. Span activation
+    * using a `Scope` is not necessary because the Akka programming model guarantees
     * single threaded execution of `apply`. */
   override def apply(v1: Any): Unit = {
     val z: SpanBuilder = state.tracer.buildSpan(operation(v1))
@@ -67,7 +67,7 @@ object TracingReceive {
     * - tags the "component" as "akka"
     */
   def apply(state: Spanned)(r: Receive): Receive =
-    new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state), timestamp())
+    new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state.tracer), timestamp())
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -76,7 +76,7 @@ object TracingReceive {
     * - tags the "akka.uri" as the actor address
     */
   def apply(state: Spanned, ref: ActorRef)(r: Receive) =
-    new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state), tagActorUri(ref), timestamp())
+    new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state.tracer), tagActorUri(ref), timestamp())
 
   /** Use a constant operation name */
   def constantOperation(operation: String): Operation = _ => operation
@@ -89,15 +89,15 @@ object TracingReceive {
 
   /** Akka messages are one-way, so by default references to the received context are
     * `FOLLOWS_FROM` rather than `CHILD_OF` */
-  def follows(state: Spanned, reference: String = References.FOLLOWS_FROM): Modifier =
+  def follows(tracer: Tracer, reference: String = References.FOLLOWS_FROM): Modifier =
     (b: SpanBuilder, m: Any) => m match {
       // The type parameter to Carrier is erased, so match on Carrier then match on the trace parameter
       case c: Carrier[_]#Traceable =>
         // Extract the SpanContext from the payload
         (c.trace match {
-          case b: Array[Byte] => BinaryCarrier.extract(state.tracer, b)
+          case b: Array[Byte] => BinaryCarrier.extract(tracer, b)
           // The type parameters to Map are erased, but the Carrier trait is sealed and there's only one Map trace
-          case m: Map[String, String]@unchecked => TextMapCarrier.extract(state.tracer, m)
+          case m: Map[String, String]@unchecked => TextMapCarrier.extract(tracer, m)
         }) match {
           case Success(s) => b.addReference(reference, s)
           case Failure(_) => b
