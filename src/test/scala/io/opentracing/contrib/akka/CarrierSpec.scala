@@ -12,7 +12,7 @@ class CarrierSpec extends FlatSpec with Matchers {
 
   def testSpanContext[T](tracer: Tracer, carrier: Carrier[T]): Unit = {
     assume(tracer.isInstanceOf[MockTracer], "Wasn't a mock span (need direct access to span and trace IDs)")
-    val span = tracer.buildSpan("operation").startManual()
+    val span = tracer.buildSpan("operation").start()
     val original: MockSpan.MockContext = span.context().asInstanceOf[MockSpan.MockContext]
     assume(original.spanId() > 0L, "Span id wasn't initialized")
     assume(original.traceId() > 0L, "Trace id wasn't initialized")
@@ -27,7 +27,7 @@ class CarrierSpec extends FlatSpec with Matchers {
   }
 
   def testBaggage[T](tracer: Tracer, carrier: Carrier[T]): Unit = {
-    val span = tracer.buildSpan("operation").startManual()
+    val span = tracer.buildSpan("operation").start()
     val test = span.setBaggageItem("key1", "value1").setBaggageItem("key2", "value2").context()
     assume(test.baggageItems().iterator().hasNext, "Test baggage wasn't created")
 

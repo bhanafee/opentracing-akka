@@ -27,7 +27,7 @@ class TracingReceive(r: Receive,
     val z: SpanBuilder = state.tracer.buildSpan(operation(v1))
     val op: (SpanBuilder, TracingReceive.Modifier) => SpanBuilder = (sb, m) => m(sb, v1)
     val sb = modifiers.foldLeft(z)(op)
-    state.span = sb.startManual()
+    state.span = sb.start()
     Try (r(v1)) match {
       case Success(_) => state.span.finish()
       case Failure(e) =>
