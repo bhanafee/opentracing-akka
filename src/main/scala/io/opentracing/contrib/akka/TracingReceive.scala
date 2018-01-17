@@ -57,7 +57,7 @@ object TracingReceive {
     * - tags the "component" as "akka"
     */
   def apply(state: Spanned)(r: Receive): Receive =
-    new TracingReceive(r, state, Spanning.messageClassIsOperation, Spanning.tagAkkaComponent, Spanning.follows(state.tracer), Spanning.timestamp())
+    new TracingReceive(r, state, Spanning.messageClassIsOperation, Spanning.akkaConsumer(state.tracer): _*)
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -66,5 +66,5 @@ object TracingReceive {
     * - tags the "akka.uri" as the actor address
     */
   def apply(state: Spanned, ref: ActorRef)(r: Receive) =
-    new TracingReceive(r, state, Spanning.messageClassIsOperation, Spanning.tagAkkaComponent, Spanning.follows(state.tracer), Spanning.tagActorUri(ref), Spanning.timestamp())
+    new TracingReceive(r, state, Spanning.messageClassIsOperation, Spanning.akkaConsumer(state.tracer, ref): _*)
 }

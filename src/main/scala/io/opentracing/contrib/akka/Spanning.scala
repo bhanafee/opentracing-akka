@@ -38,6 +38,16 @@ object Spanning {
   /** Used to stack SpanBuilder operations */
   type Modifier = (SpanBuilder, Any) => SpanBuilder
 
+  def akkaConsumer(tracer: Tracer): Seq[Modifier] = Seq[Modifier] (
+    tagAkkaComponent,
+    tagAkkaConsumer,
+    follows(tracer),
+    timestamp()
+  )
+
+  def akkaConsumer(tracer: Tracer, ref: ActorRef): Seq[Modifier] =
+    akkaConsumer(tracer) :+ tagActorUri(ref)
+
   /** Akka messages are one-way, so by default references to the received context are
     * `FOLLOWS_FROM` rather than `CHILD_OF` */
   def follows(tracer: Tracer, reference: String = References.FOLLOWS_FROM): Modifier =
@@ -53,6 +63,12 @@ object Spanning {
   /** Add a "component" span tag indicating the framework is "akka" */
   val tagAkkaComponent: Modifier =
     (sb: SpanBuilder, _) => sb.withTag("component", "akka")
+
+  val tagAkkaConsumer: Modifier =
+    (sb: SpanBuilder, _) => sb.withTag("span.kind", "consumer")
+
+  val tagAkkaProducer: Modifier =
+    (sb: SpanBuilder, _) => sb.withTag("span.kind", "producer")
 
   /** Add an "akka.uri" span tag containing the actor address */
   def tagActorUri(ref: ActorRef): Modifier =
