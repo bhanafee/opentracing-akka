@@ -1,16 +1,15 @@
 package io.opentracing.contrib.akka
 
-import io.opentracing.{SpanContext, Tracer}
+import java.util.{Iterator => JIterator, Map => JMap}
+
 import io.opentracing.propagation.Format.Builtin.TEXT_MAP
+import io.opentracing.propagation.TextMap
+import io.opentracing.{SpanContext, Tracer}
 
 import scala.util.{Failure, Success, Try}
 
 /** Adapts the `TEXT_MAP` format to an immutable `Map[String, String]` payload */
 object TextMapCarrier extends Carrier[Map[String, String]] {
-
-  import java.util.{Iterator => JIterator, Map => JMap}
-
-  import io.opentracing.propagation.TextMap
 
   import scala.collection.JavaConverters._
 
