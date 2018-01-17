@@ -34,14 +34,8 @@ object SpanModifiers {
     * `FOLLOWS_FROM` rather than `CHILD_OF` */
   def follows(tracer: Tracer, reference: String = References.FOLLOWS_FROM): Modifier =
     (b: SpanBuilder, m: Any) => m match {
-      // The type parameter to Carrier is erased, so match on Carrier then match on the trace parameter
       case c: Carrier[_]#Traceable =>
-        // Extract the SpanContext from the payload
-        (c.trace match {
-          case b: Array[Byte] => BinaryCarrier.extract(tracer, b)
-          // The type parameters to Map are erased, but the Carrier trait is sealed and there's only one Map trace
-          case m: Map[String, String]@unchecked => TextMapCarrier.extract(tracer, m)
-        }) match {
+        c.context(tracer) match {
           case Success(s) => b.addReference(reference, s)
           case Failure(_) => b
         }
