@@ -4,12 +4,20 @@ import java.time.Instant
 import java.time.temporal.ChronoField
 
 import akka.actor.ActorRef
-import io.opentracing.{References, Tracer}
+import io.opentracing.{References, Span, Tracer}
 import io.opentracing.Tracer.SpanBuilder
 
 import scala.util.{Failure, Success}
 
-object SpanModifiers {
+object Spanning {
+
+  def apply(tracer: Tracer, message: Any, operation: Operation, modifiers: Modifier*): Span = {
+    val z: SpanBuilder = tracer.buildSpan(operation(message))
+    val op: (SpanBuilder, Modifier) => SpanBuilder = (sb, m) => m(sb, message)
+    val sb = modifiers.foldLeft(z)(op)
+    sb.start()
+  }
+
 
   /* Operations */
 
@@ -20,7 +28,7 @@ object SpanModifiers {
   def constantOperation(operation: String): Operation = _ => operation
 
   /** Use the message type as the trace operation name */
-  val messageClassIsOperation: Operation = _.getClass.getName
+  val messageClassIsOperation: Operation = message => message.getClass.getName
 
   /** Use the actor name as the trace operation name */
   def actorNameIsOperation(ref: ActorRef): Operation = constantOperation(ref.path.name)
@@ -33,22 +41,22 @@ object SpanModifiers {
   /** Akka messages are one-way, so by default references to the received context are
     * `FOLLOWS_FROM` rather than `CHILD_OF` */
   def follows(tracer: Tracer, reference: String = References.FOLLOWS_FROM): Modifier =
-    (b: SpanBuilder, m: Any) => m match {
+    (sb: SpanBuilder, message: Any) => message match {
       case c: Carrier[_]#Traceable =>
         c.context(tracer) match {
-          case Success(s) => b.addReference(reference, s)
-          case Failure(_) => b
+          case Success(s) => sb.addReference(reference, s)
+          case Failure(_) => sb
         }
-      case _ => b
+      case _ => sb
     }
 
   /** Add a "component" span tag indicating the framework is "akka" */
   val tagAkkaComponent: Modifier =
-    (b: SpanBuilder, _) => b.withTag("component", "akka")
+    (sb: SpanBuilder, _) => sb.withTag("component", "akka")
 
   /** Add an "akka.uri" span tag containing the actor address */
   def tagActorUri(ref: ActorRef): Modifier =
-    (b: SpanBuilder, _) => b.withTag("akka.uri", ref.path.address.toString)
+    (sb: SpanBuilder, _) => sb.withTag("akka.uri", ref.path.address.toString)
 
   /** Add an arbitrary span tag, taking the value from some extract function that accepts the message as input */
   def tag(name: String, extract: Any => Option[Any]): Modifier = (sb: SpanBuilder, m: Any) => extract(m) match {
@@ -69,6 +77,5 @@ object SpanModifiers {
 
   /** Add a start timestamp using `micros()` */
   def timestamp(): Modifier = (sb: SpanBuilder, _) => sb.withStartTimestamp(micros())
-
 
 }

@@ -3,8 +3,7 @@ package io.opentracing.contrib.akka
 import akka.actor.Actor.Receive
 import akka.actor.ActorRef
 import io.opentracing.Span
-import io.opentracing.Tracer.SpanBuilder
-import io.opentracing.contrib.akka.SpanModifiers._
+import io.opentracing.contrib.akka.Spanning.{Modifier, Operation}
 
 import scala.util.{Failure, Success, Try}
 
@@ -23,10 +22,7 @@ class TracingReceive(r: Receive,
     * using a `Scope` is not necessary because the Akka programming model guarantees
     * single threaded execution of `apply`. */
   override def apply(v1: Any): Unit = {
-    val z: SpanBuilder = state.tracer.buildSpan(operation(v1))
-    val op: (SpanBuilder, SpanModifiers.Modifier) => SpanBuilder = (sb, m) => m(sb, v1)
-    val sb = modifiers.foldLeft(z)(op)
-    state.span = sb.start()
+    state.span = Spanning(state.tracer, v1, operation, modifiers: _*)
     Try(r(v1)) match {
       case Success(_) =>
         state.span.finish()
@@ -40,7 +36,7 @@ class TracingReceive(r: Receive,
   }
 
   /** Tag and log an exception thrown by `apply` */
-  def error(span: Span, e: Throwable, micros: => Long = SpanModifiers.micros()): Unit = {
+  def error(span: Span, e: Throwable, micros: => Long = Spanning.micros()): Unit = {
     val time = micros
     span.setTag("error", true)
     val fields: java.util.Map[String, Any] = new java.util.HashMap[String, Any]
@@ -61,7 +57,7 @@ object TracingReceive {
     * - tags the "component" as "akka"
     */
   def apply(state: Spanned)(r: Receive): Receive =
-    new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state.tracer), timestamp())
+    new TracingReceive(r, state, Spanning.messageClassIsOperation, Spanning.tagAkkaComponent, Spanning.follows(state.tracer), Spanning.timestamp())
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -70,5 +66,5 @@ object TracingReceive {
     * - tags the "akka.uri" as the actor address
     */
   def apply(state: Spanned, ref: ActorRef)(r: Receive) =
-    new TracingReceive(r, state, messageClassIsOperation, tagAkkaComponent, follows(state.tracer), tagActorUri(ref), timestamp())
+    new TracingReceive(r, state, Spanning.messageClassIsOperation, Spanning.tagAkkaComponent, Spanning.follows(state.tracer), Spanning.tagActorUri(ref), Spanning.timestamp())
 }
