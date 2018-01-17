@@ -6,7 +6,7 @@ import io.opentracing.{SpanContext, Tracer}
 import scala.util.{Failure, Success, Try}
 
 /** Carrier type `P` should be treated as opaque to enable switching between representations, and immutable. */
-sealed trait Carrier[P] {
+trait Carrier[P] {
   type Payload = P
 
   /** Adds a carrier to message case classes. To keep the trace information out of the usual
@@ -22,6 +22,7 @@ sealed trait Carrier[P] {
     */
   trait Traceable {
     val trace: Payload
+    def context(t: Tracer): Try[SpanContext] = extract(t, trace)
   }
 
   /** Generate the tracer-specific payload to transmit a span context. */
