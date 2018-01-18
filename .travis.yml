@@ -3,3 +3,8 @@ scala:
    - 2.12.4
 jdk:
    - oraclejdk8
+
+# "gradle" branch is a submodule that depends on the parent
+branches:
+  except:
+  - gradle
