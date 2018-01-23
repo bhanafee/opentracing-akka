@@ -4,10 +4,10 @@ import java.time.Instant
 import java.time.temporal.ChronoField
 
 import akka.actor.ActorRef
-import io.opentracing.{References, Span, Tracer}
+import io.opentracing.{References, Span, SpanContext, Tracer}
 import io.opentracing.Tracer.SpanBuilder
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object Spanning {
 
@@ -48,13 +48,25 @@ object Spanning {
   def akkaConsumer(tracer: Tracer, ref: ActorRef): Seq[Modifier] =
     akkaConsumer(tracer) :+ tagActorUri(ref)
 
+  def akkaProducer(span: Span): Seq[Modifier] = Seq[Modifier] (
+    tagAkkaComponent,
+    tagAkkaConsumer,
+    follows(span),
+    timestamp()
+  )
+
   /** Akka messages are one-way, so by default references to the received context are
     * `FOLLOWS_FROM` rather than `CHILD_OF` */
-  def follows(tracer: Tracer, reference: String = References.FOLLOWS_FROM): Modifier =
+  def follows(context: SpanContext): Modifier =
+    (sb: SpanBuilder, _) => sb.addReference(References.FOLLOWS_FROM, context)
+
+  def follows(span: Span): Modifier = follows(span.context())
+
+  def follows(tracer: Tracer): Modifier =
     (sb: SpanBuilder, message: Any) => message match {
       case c: Carrier[_]#Traceable =>
         c.context(tracer) match {
-          case Success(s) => sb.addReference(reference, s)
+          case Success(sc) => sb.addReference(References.FOLLOWS_FROM, sc)
           case Failure(_) => sb
         }
       case _ => sb
