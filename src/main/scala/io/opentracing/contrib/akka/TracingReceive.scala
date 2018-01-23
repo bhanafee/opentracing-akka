@@ -8,8 +8,8 @@ import io.opentracing.contrib.akka.Spanning.Modifier
 import scala.util.{Failure, Success, Try}
 
 /** Decorator to add an OpenTracing Span around an Actor's Receive */
-class TracingReceive(r: Receive,
-                     state: Spanned,
+class TracingReceive(state: Spanned,
+                     r: Receive,
                      modifiers: Modifier*)
   extends Receive {
 
@@ -48,7 +48,7 @@ class TracingReceive(r: Receive,
 object TracingReceive {
 
   def apply(state: Spanned, modifiers: Modifier*)(r: Receive): Receive =
-    new TracingReceive(r, state, modifiers: _*)
+    new TracingReceive(state, r, modifiers: _*)
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -56,7 +56,7 @@ object TracingReceive {
     * - tags the "component" as "akka"
     */
   def apply(state: Spanned)(r: Receive): Receive =
-    new TracingReceive(r, state, Spanning.akkaConsumer(state.tracer): _*)
+    apply(state, Spanning.akkaConsumer(state.tracer): _*)(r)
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -64,6 +64,6 @@ object TracingReceive {
     * - tags the "component" as "akka"
     * - tags the "akka.uri" as the actor address
     */
-  def apply(state: Spanned, ref: ActorRef)(r: Receive) =
-    new TracingReceive(r, state, Spanning.akkaConsumer(state.tracer, ref): _*)
+  def apply(state: Spanned, ref: ActorRef)(r: Receive): Receive =
+    apply(state, Spanning.akkaConsumer(state.tracer, ref): _*)(r)
 }
