@@ -21,13 +21,13 @@ trait Carrier[P] {
     */
   trait Traceable {
     val trace: Payload
-    def context(t: Tracer): Try[SpanContext] = extract(t, trace)
+    def context(t: Tracer): Try[SpanContext] = extract(t)(trace)
   }
 
   /** Generate the tracer-specific payload to transmit a span context. */
-  def inject(t: Tracer, c: SpanContext): Payload
+  def inject(t: Tracer)(c: SpanContext): Payload
 
   /** Extract the tracer-specific payload to describe a span context. */
-  def extract(t: Tracer, p: Payload): Try[SpanContext]
+  def extract(t: Tracer)(p: Payload): Try[SpanContext]
 
 }

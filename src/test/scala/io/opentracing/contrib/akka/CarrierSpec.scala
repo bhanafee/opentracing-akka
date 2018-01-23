@@ -17,8 +17,8 @@ class CarrierSpec extends FlatSpec with Matchers {
     assume(original.spanId() > 0L, "Span id wasn't initialized")
     assume(original.traceId() > 0L, "Trace id wasn't initialized")
 
-    val p: T = carrier.inject(tracer, original)
-    val result: Try[SpanContext] = carrier.extract(tracer, p)
+    val p: T = carrier.inject(tracer)(original)
+    val result: Try[SpanContext] = carrier.extract(tracer)(p)
 
     result shouldBe 'isSuccess
     val ctx = result.get.asInstanceOf[MockSpan.MockContext]
@@ -31,8 +31,8 @@ class CarrierSpec extends FlatSpec with Matchers {
     val test = span.setBaggageItem("key1", "value1").setBaggageItem("key2", "value2").context()
     assume(test.baggageItems().iterator().hasNext, "Test baggage wasn't created")
 
-    val p: T = carrier.inject(tracer, test)
-    val result: Try[SpanContext] = carrier.extract(tracer, p)
+    val p: T = carrier.inject(tracer)(test)
+    val result: Try[SpanContext] = carrier.extract(tracer)(p)
 
     result shouldBe 'isSuccess
     val it = result.get.baggageItems().iterator()
@@ -45,13 +45,13 @@ class CarrierSpec extends FlatSpec with Matchers {
   }
 
   def testEmpty[T](tracer: Tracer, carrier: Carrier[T], empty: T): Unit = {
-    val result: Try[SpanContext] = carrier.extract(tracer, empty)
+    val result: Try[SpanContext] = carrier.extract(tracer)(empty)
 
     result shouldBe 'isFailure
   }
 
   def testMalformed[T](tracer: Tracer, carrier: Carrier[T], malformed: T): Unit = {
-    val result: Try[SpanContext] = carrier.extract(tracer, malformed)
+    val result: Try[SpanContext] = carrier.extract(tracer)(malformed)
     result shouldBe 'isFailure
   }
 

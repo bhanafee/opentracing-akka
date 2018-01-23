@@ -22,7 +22,7 @@ object TextMapCarrier extends Carrier[Map[String, String]] {
       throw new UnsupportedOperationException("Tried to put value to immutable carrier")
   }
 
-  override def inject(t: Tracer, c: SpanContext): Payload = {
+  override def inject(t: Tracer)(c: SpanContext): Payload = {
     var kvs: List[(String, String)] = List.empty
     t.inject(c, TEXT_MAP, new TextMapAdapter {
       override def put(key: String, value: String): Unit = kvs = (key, value) :: kvs
@@ -30,7 +30,7 @@ object TextMapCarrier extends Carrier[Map[String, String]] {
     Map(kvs: _*)
   }
 
-  override def extract(t: Tracer, p: Payload): Try[SpanContext] =
+  override def extract(t: Tracer)(p: Payload): Try[SpanContext] =
     if (p.isEmpty) Failure(new NoSuchElementException("Empty payload"))
     else {
       Try(t.extract(TEXT_MAP, new TextMapAdapter {
