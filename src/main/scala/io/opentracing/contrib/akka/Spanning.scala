@@ -7,31 +7,16 @@ import akka.actor.ActorRef
 import io.opentracing.{References, Span, SpanContext, Tracer}
 import io.opentracing.Tracer.SpanBuilder
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 object Spanning {
 
-  def apply(tracer: Tracer, message: Any, operation: Operation, modifiers: Modifier*): Span = {
-    val z: SpanBuilder = tracer.buildSpan(operation(message))
+  def apply(tracer: Tracer, operation: String, message: Any, modifiers: Modifier*): Span = {
+    val z: SpanBuilder = tracer.buildSpan(operation)
     val op: (SpanBuilder, Modifier) => SpanBuilder = (sb, m) => m(sb, message)
     val sb = modifiers.foldLeft(z)(op)
     sb.start()
   }
-
-
-  /* Operations */
-
-  /** Used to specify the span's operation name */
-  type Operation = Any => String
-
-  /** Use a constant operation name */
-  def constantOperation(operation: String): Operation = _ => operation
-
-  /** Use the message type as the trace operation name */
-  val messageClassIsOperation: Operation = message => message.getClass.getName
-
-  /** Use the actor name as the trace operation name */
-  def actorNameIsOperation(ref: ActorRef): Operation = constantOperation(ref.path.name)
 
   /* Modifiers */
 

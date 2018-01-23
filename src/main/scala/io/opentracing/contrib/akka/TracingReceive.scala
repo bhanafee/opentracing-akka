@@ -3,14 +3,13 @@ package io.opentracing.contrib.akka
 import akka.actor.Actor.Receive
 import akka.actor.ActorRef
 import io.opentracing.Span
-import io.opentracing.contrib.akka.Spanning.{Modifier, Operation}
+import io.opentracing.contrib.akka.Spanning.Modifier
 
 import scala.util.{Failure, Success, Try}
 
 /** Decorator to add an OpenTracing Span around an Actor's Receive */
 class TracingReceive(r: Receive,
                      state: Spanned,
-                     operation: Operation,
                      modifiers: Modifier*)
   extends Receive {
 
@@ -22,7 +21,7 @@ class TracingReceive(r: Receive,
     * using a `Scope` is not necessary because the Akka programming model guarantees
     * single threaded execution of `apply`. */
   override def apply(v1: Any): Unit = {
-    state.span = Spanning(state.tracer, v1, operation, modifiers: _*)
+    state.span = Spanning(state.tracer, state.operation(), v1, modifiers: _*)
     Try(r(v1)) match {
       case Success(_) =>
         state.span.finish()
@@ -48,8 +47,8 @@ class TracingReceive(r: Receive,
 
 object TracingReceive {
 
-  def apply(state: Spanned, operation: Operation, modifiers: Modifier*)(r: Receive): Receive =
-    new TracingReceive(r, state, operation, modifiers: _*)
+  def apply(state: Spanned, modifiers: Modifier*)(r: Receive): Receive =
+    new TracingReceive(r, state, modifiers: _*)
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -57,7 +56,7 @@ object TracingReceive {
     * - tags the "component" as "akka"
     */
   def apply(state: Spanned)(r: Receive): Receive =
-    new TracingReceive(r, state, Spanning.messageClassIsOperation, Spanning.akkaConsumer(state.tracer): _*)
+    new TracingReceive(r, state, Spanning.akkaConsumer(state.tracer): _*)
 
   /** Tracing receive that
     * - uses the message type as the operation name
@@ -66,5 +65,5 @@ object TracingReceive {
     * - tags the "akka.uri" as the actor address
     */
   def apply(state: Spanned, ref: ActorRef)(r: Receive) =
-    new TracingReceive(r, state, Spanning.messageClassIsOperation, Spanning.akkaConsumer(state.tracer, ref): _*)
+    new TracingReceive(r, state, Spanning.akkaConsumer(state.tracer, ref): _*)
 }
