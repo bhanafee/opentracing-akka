@@ -2,15 +2,15 @@ package io.opentracing.contrib.akka
 
 import akka.actor.Actor.Receive
 import akka.actor.ActorRef
-import io.opentracing.Span
-import io.opentracing.contrib.akka.Spanning.Modifier
+import io.opentracing.{References, Span, SpanContext, Tracer}
+import Spanned.Modifier
 
 import scala.util.{Failure, Success, Try}
 
 /** Decorator to add an OpenTracing Span around an Actor's Receive */
 class TracingReceive(state: Spanned,
                      r: Receive,
-                     modifiers: Modifier*)
+                     modifiers: Spanned.Modifier*)
   extends Receive {
 
   /** Proxies `r.isDefinedAt` */
@@ -21,7 +21,14 @@ class TracingReceive(state: Spanned,
     * using a `Scope` is not necessary because the Akka programming model guarantees
     * single threaded execution of `apply`. */
   override def apply(v1: Any): Unit = {
-    state.span = Spanning(state.tracer, state.operation(), v1, modifiers: _*)
+    val sb = modifiers.foldLeft(state.tracer.buildSpan(state.operation()))((sb, m) => m(sb))
+    context(state.tracer)(v1) match {
+      case Success(sc) =>
+        state.span = sb.addReference(References.FOLLOWS_FROM, sc).start()
+      case Failure(e) =>
+        state.span = sb.start()
+        state.span.log(e.getLocalizedMessage)
+    }
     Try(r(v1)) match {
       case Success(_) =>
         state.span.finish()
@@ -35,7 +42,7 @@ class TracingReceive(state: Spanned,
   }
 
   /** Tag and log an exception thrown by `apply` */
-  def error(span: Span, e: Throwable, micros: => Long = Spanning.micros()): Unit = {
+  def error(span: Span, e: Throwable, micros: => Long = Spanned.micros()): Unit = {
     val time = micros
     span.setTag("error", true)
     val fields: java.util.Map[String, Any] = new java.util.HashMap[String, Any]
@@ -43,27 +50,28 @@ class TracingReceive(state: Spanned,
     fields.put("error.object", e)
     span.log(time, fields)
   }
+
+  def context(tracer: Tracer)(message: Any): Try[SpanContext] = message match {
+    case c: Carrier[_]#Traceable => c.context(tracer)
+    case _ => Failure(new IllegalArgumentException(s"Message type ${message.getClass} is not a carrier for SpanContext"))
+  }
 }
 
 object TracingReceive {
 
+  /** Default modifiers to apply to a span surrounding a Receive. */
+  val defaultModifiers = Seq(Spanned.tagAkkaComponent, Spanned.tagConsumer, Spanned.timestamp())
+
+  /** Tracing receive that uses the supplied modifiers */
   def apply(state: Spanned, modifiers: Modifier*)(r: Receive): Receive =
     new TracingReceive(state, r, modifiers: _*)
 
-  /** Tracing receive that
-    * - uses the message type as the operation name
-    * - includes a FOLLOWS_FROM reference to any span found in the message
-    * - tags the "component" as "akka"
-    */
+  /** Tracing receive that uses the default modifiers */
   def apply(state: Spanned)(r: Receive): Receive =
-    apply(state, Spanning.akkaConsumer(state.tracer): _*)(r)
+    apply(state, defaultModifiers: _*)(r)
 
-  /** Tracing receive that
-    * - uses the message type as the operation name
-    * - includes a FOLLOWS_FROM reference to any span found in the message
-    * - tags the "component" as "akka"
-    * - tags the "akka.uri" as the actor address
-    */
-  def apply(state: Spanned, ref: ActorRef)(r: Receive): Receive =
-    apply(state, Spanning.akkaConsumer(state.tracer, ref): _*)(r)
+  /** Tracing receive that uses the default modifiers and adds an "akka.uri" tag containing the actor address */
+  def apply(state: Spanned, ref: ActorRef)(r: Receive): Receive = {
+    apply(state, defaultModifiers :+ Spanned.tagActorUri(ref): _*)(r)
+  }
 }
