@@ -24,8 +24,8 @@ object BinaryCarrier extends Carrier[Array[Byte]] {
   override def extract(t: Tracer)(p: Payload): Try[SpanContext] =
     if (p.isEmpty) Failure(new NoSuchElementException("Empty payload"))
     else Try(t.extract(BINARY, ByteBuffer.wrap(p))) match {
-      case Success(null) => Failure(new NullPointerException("Tracer.extract returned null"))
-      case x => x
+      case Success(null) ⇒ Failure(new NullPointerException("Tracer.extract returned null"))
+      case x ⇒ x
     }
 
 }

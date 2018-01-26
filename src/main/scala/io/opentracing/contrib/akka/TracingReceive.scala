@@ -21,19 +21,19 @@ class TracingReceive(state: Spanned,
     * using a `Scope` is not necessary because the Akka programming model guarantees
     * single threaded execution of `apply`. */
   override def apply(v1: Any): Unit = {
-    val sb = modifiers.foldLeft(state.tracer.buildSpan(state.operation()))((sb, m) => m(sb))
+    val sb = modifiers.foldLeft(state.tracer.buildSpan(state.operation()))((sb, m) ⇒ m(sb))
     context(state.tracer)(v1) match {
-      case Success(sc) =>
+      case Success(sc) ⇒
         state.span = sb.addReference(References.FOLLOWS_FROM, sc).start()
-      case Failure(e) =>
+      case Failure(e) ⇒
         state.span = sb.start()
         state.span.log(e.getLocalizedMessage)
     }
     Try(r(v1)) match {
-      case Success(_) =>
+      case Success(_) ⇒
         state.span.finish()
         state.span_=(null)
-      case Failure(e) =>
+      case Failure(e) ⇒
         error(state.span, e)
         state.span.finish()
         state.span_=(null)
@@ -42,7 +42,7 @@ class TracingReceive(state: Spanned,
   }
 
   /** Tag and log an exception thrown by `apply` */
-  def error(span: Span, e: Throwable, micros: => Long = Spanned.micros()): Unit = {
+  def error(span: Span, e: Throwable, micros: ⇒ Long = Spanned.micros()): Unit = {
     val time = micros
     span.setTag("error", true)
     val fields: java.util.Map[String, Any] = new java.util.HashMap[String, Any]
@@ -52,8 +52,8 @@ class TracingReceive(state: Spanned,
   }
 
   def context(tracer: Tracer)(message: Any): Try[SpanContext] = message match {
-    case c: Carrier[_]#Traceable => c.context(tracer)
-    case _ => Failure(new IllegalArgumentException(s"Message type ${message.getClass} is not a carrier for SpanContext"))
+    case c: Carrier[_]#Traceable ⇒ c.context(tracer)
+    case _ ⇒ Failure(new IllegalArgumentException(s"Message type ${message.getClass} is not a carrier for SpanContext"))
   }
 }
 

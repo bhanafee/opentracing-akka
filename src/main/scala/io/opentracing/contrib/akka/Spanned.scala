@@ -21,7 +21,7 @@ trait Spanned {
   /** Returns the current span, creating and starting one if necessary. */
   def span: Span = {
     // Not thread-safe, but if there are two threads acting on the span there are other problems.
-    if (_span == null) {
+    if (_span eq null) {
       _span = tracer.buildSpan(operation()).start()
     }
     _span
@@ -34,7 +34,7 @@ trait Spanned {
 
 object Spanned {
   /** Used to stack SpanBuilder operations */
-  type Modifier = SpanBuilder => SpanBuilder
+  type Modifier = SpanBuilder ⇒ SpanBuilder
 
   /** Add a "component" span tag indicating the framework is "akka" */
   val tagAkkaComponent: Modifier = _.withTag("component", "akka")

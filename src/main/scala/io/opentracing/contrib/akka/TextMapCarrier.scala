@@ -1,6 +1,6 @@
 package io.opentracing.contrib.akka
 
-import java.util.{Iterator => JIterator, Map => JMap}
+import java.util.{Iterator ⇒ JIterator, Map ⇒ JMap}
 
 import io.opentracing.propagation.Format.Builtin.TEXT_MAP
 import io.opentracing.propagation.TextMap
@@ -37,8 +37,8 @@ object TextMapCarrier extends Carrier[Map[String, String]] {
         override def iterator(): JIterator[JMap.Entry[String, String]] =
           p.asJava.entrySet().iterator()
       })) match {
-        case Success(null) => Failure(new NullPointerException("Tracer.extract returned null"))
-        case x => x
+        case Success(null) ⇒ Failure(new NullPointerException("Tracer.extract returned null"))
+        case x ⇒ x
       }
     }
 

@@ -16,7 +16,7 @@ trait Carrier[P] {
     * {{{case class Message(foo: String, bar: Int)(val trace: Payload) extends Traceable
     *
     * msg match {
-    *   case ("foo", 1) => ???
+    *   case ("foo", 1) ⇒ ???
     * }}}
     */
   trait Traceable {
