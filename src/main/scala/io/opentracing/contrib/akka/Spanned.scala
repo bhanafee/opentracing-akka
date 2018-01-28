@@ -1,11 +1,8 @@
 package io.opentracing.contrib.akka
 
-import java.time.Instant
-import java.time.temporal.ChronoField
-
-import akka.actor.ActorRef
-import io.opentracing.Tracer.SpanBuilder
 import io.opentracing.{Span, Tracer}
+
+import scala.util.{Failure, Try}
 
 /** Holds current span. */
 trait Spanned {
@@ -30,21 +27,50 @@ trait Spanned {
   /** Sets the current span. */
   def span_=(s: Span): Unit = _span = s
 
+  /** Convenience conversion used in trace bodies. */
+  implicit val span2MapPayload: Span ⇒ TextMapCarrier.Payload = s ⇒ TextMapCarrier.inject(tracer)(s.context())
+
+  /** Convenience conversion used in trace bodies. */
+  implicit val span2ByteArrayPayload: Span ⇒ BinaryCarrier.Payload = s ⇒ BinaryCarrier.inject(tracer)(s.context())
+
+  /** Start a child span. The span will be tagged automatically as ``span.kind = producer``, and if the
+    * body throws an exception the span will be tagged with ``error = true`` and the exception will be
+    * logged as ``error.object``.
+    * @param op operation for the child span
+    * @param modifiers applied to the SpanBuilder for the child span
+    * @param body the block to be traced
+    */
+  def trace(op: String, modifiers: Spanned.Modifier*)(body: Span ⇒ Unit): Unit = {
+    val child: Span = (Spanned.tagProducer +: modifiers).foldLeft(tracer.buildSpan(op))((sb, m) ⇒ m(sb)).start()
+    Try(body(child)) match {
+      case Failure(e) ⇒
+        child.setTag("error", true)
+        val fields: java.util.Map[String, Any] = new java.util.HashMap[String, Any]
+        fields.put("event", "error")
+        fields.put("error.object", e)
+        span.log(Spanned.micros(), fields)
+        child.finish()
+      case _ ⇒ child.finish()
+    }
+  }
+
 }
+
+
+import java.time.Instant
+import java.time.temporal.ChronoField
+
+import io.opentracing.Tracer.SpanBuilder
 
 object Spanned {
   /** Used to stack SpanBuilder operations */
   type Modifier = SpanBuilder ⇒ SpanBuilder
 
-  /** Add a "component" span tag indicating the framework is "akka" */
-  val tagAkkaComponent: Modifier = _.withTag("component", "akka")
-
+  /** Tags ``span.kind = consumer``. */
   val tagConsumer: Modifier = _.withTag("span.kind", "consumer")
 
+  /** Tags ``span.kind = producer``. */
   val tagProducer: Modifier = _.withTag("span.kind", "producer")
-
-  /** Add an "akka.uri" span tag containing the actor address */
-  def tagActorUri(ref: ActorRef): Modifier = _.withTag("akka.uri", ref.path.address.toString)
 
   /** Timestamp in microseconds */
   def micros(): Long = {
@@ -54,6 +80,6 @@ object Spanned {
     secs * 1000000 + micros
   }
 
-  /** Add a start timestamp using `micros()` */
+  /** Adds a start timestamp using `micros()` */
   def timestamp(): Modifier = _.withStartTimestamp(micros())
 }

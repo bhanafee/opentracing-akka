@@ -4,7 +4,9 @@ import io.opentracing.{SpanContext, Tracer}
 
 import scala.util.Try
 
-/** Carrier type `P` should be treated as opaque to enable switching between representations, and immutable. */
+/** Carrier type `P` should be treated as opaque to enable switching between representations, and immutable.
+  * @tparam P the datatype used for the carrier payload.
+  */
 trait Carrier[P] {
   type Payload = P
 
@@ -24,10 +26,19 @@ trait Carrier[P] {
     def context(t: Tracer): Try[SpanContext] = extract(t)(trace)
   }
 
-  /** Generate the tracer-specific payload to transmit a span context. */
+  /**
+    * Returns a payload encoding the [[SpanContext]]
+    * @param t the [[Tracer]] performing the encoding
+    * @param c the [[SpanContext]] to encode
+    * @return the encoded [[SpanContext]]
+    */
   def inject(t: Tracer)(c: SpanContext): Payload
 
-  /** Extract the tracer-specific payload to describe a span context. */
+  /** Extract the tracer-specific payload to describe a [[SpanContext]].
+    * @param t the tracer that generated the payload
+    * @param p the payload containing the encoded context
+    * @return the result of decoding the payload into a [[SpanContext]]
+    */
   def extract(t: Tracer)(p: Payload): Try[SpanContext]
 
 }
