@@ -17,6 +17,8 @@ class TracingReceive(self: Spanned,
                      modifiers: Spanned.Modifier*)
   extends Receive {
 
+  val extractor: Any ⇒ Try[SpanContext] = TracingReceive.context(self.tracer)
+
   /** Proxies `r.isDefinedAt`
     * @param x @inheritDoc
     * @return @inheritDoc
@@ -31,7 +33,7 @@ class TracingReceive(self: Spanned,
     */
   override def apply(v1: Any): Unit = {
     val sb = modifiers.foldLeft(self.tracer.buildSpan(self.operation()))((sb, m) ⇒ m(sb))
-    context(self.tracer)(v1) match {
+    extractor(v1) match {
       case Success(sc) ⇒
         self.span = sb.addReference(References.FOLLOWS_FROM, sc).start()
       case Failure(e) ⇒
@@ -53,26 +55,14 @@ class TracingReceive(self: Spanned,
   /** Tag and log an exception thrown by `apply`
     * @param span the span that produced the error
     * @param e the error
-    * @param micros generates the timestamp for the error
     */
-  def error(span: Span, e: Throwable, micros: ⇒ Long = Spanned.micros()): Unit = {
-    val time = micros
+  def error(span: Span, e: Throwable): Unit = {
+    val time = Spanned.micros()
     span.setTag("error", true)
     val fields: java.util.Map[String, Any] = new java.util.HashMap[String, Any]
     fields.put("event", "error")
     fields.put("error.object", e)
     span.log(time, fields)
-  }
-
-  /**
-    * Default method to extract a [[SpanContext]] from a message.
-    * @param tracer the tracer that encoded the context
-    * @param message the message containing the encoded context
-    * @return the result of extracting the context from the message
-    */
-  def context(tracer: Tracer)(message: Any): Try[SpanContext] = message match {
-    case c: Carrier[_]#Traceable ⇒ c.context(tracer)
-    case _ ⇒ Failure(new IllegalArgumentException(s"Message type ${message.getClass} is not a carrier for SpanContext"))
   }
 }
 
@@ -92,5 +82,16 @@ object TracingReceive {
   /** Tracing receive that uses the default modifiers and adds an "akka.uri" tag containing the actor address */
   def apply(state: Spanned, ref: ActorRef)(r: Receive): Receive = {
     apply(state, defaultModifiers :+ ActorTracing.tagActorUri(ref): _*)(r)
+  }
+
+  /**
+    * Default method to extract a [[SpanContext]] from a message.
+    * @param tracer the tracer that encoded the context
+    * @param message the message containing the encoded context
+    * @return the result of extracting the context from the message
+    */
+  def context(tracer: Tracer)(message: Any): Try[SpanContext] = message match {
+    case c: Carrier[_]#Traceable ⇒ c.context(tracer)
+    case _ ⇒ Failure(new IllegalArgumentException(s"Message type ${message.getClass} is not a carrier for SpanContext"))
   }
 }
